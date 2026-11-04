@@ -99,7 +99,9 @@ A pod network implementation must act as a Dynamic Resource Allocation (DRA) dri
 
 A ResourceClaim acts as the mechanism for attaching pods to pod networks. Users create requests in the ResourceClaim to select a specific pod network. The pod network implementation is responsible for allocating devices to satisfy these requests and for reporting the attachment status of workloads through the ResourceClaim device status.
 
-Cluster administrators control how users may attach to pod networks by defining DeviceClass objects. Device classes can constrain which devices are selectable, allowing administrators to enforce policies such as limiting access to particular pod networks.
+Cluster administrators control how users may attach to pod networks by defining DeviceClass objects. Device classes can constrain which devices are selectable, allowing administrators to enforce cluster-level policies such as limiting access to particular pod networks.
+
+**Note (Cross-Namespace Tenancy and Security):** `ResourceSlice` and `DeviceClass` are cluster-scoped resources, and DRA CEL selectors do not currently expose `ResourceClaim.metadata.namespace` (upstream [KEP-5291](https://github.com/kubernetes/enhancements/issues/5291) for fine-grained DRA resource access was closed as `not_planned`). As a result, DRA scheduling alone cannot prevent a `ResourceClaim` in one namespace from selecting a namespace-scoped pod network in another namespace. Until DRA provides native cross-namespace access control, implementations of namespace-scoped pod networks must enforce tenant isolation (for example, by rejecting unauthorized cross-namespace claims in the DRA driver during `NodePrepareResources`), or cluster administrators must restrict cross-namespace selection through admission policies (such as `ValidatingAdmissionPolicy`).
 
 Each DRA driver manages the full lifecycle of devices representing pod network attachments, including allocation, deallocation, and updates to device attributes. This design does not interpret the semantics of these devices, it relies solely on standard device attributes and the device status to enable discovery, selection, and attachment of pod networks.
 
@@ -202,6 +204,8 @@ Without a common `PodNetwork` API, there is no single resource type that represe
 
 To address this, pod network implementations must register their resource type under the `podnetworks` category. Resource type categories allow `kubectl` to aggregate resources of different types under a single alias, enabling users to list all pod networks across all implementations with a single command: `kubectl get podnetworks`.
 
+**Note:** Kubernetes API reviewers raised initial concerns about using the `podnetworks` resource category because category expansion takes precedence over resource type resolution in `kubectl`, which can collide with or shadow a future `podnetworks` resource (see [Kubernetes API Conventions — Short Names and Categories](https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#short-names-and-categories)). This behavior is retained for `v1alpha1` experimentation and must be revisited before graduating beyond `v1alpha1`.
+
 Below is an example CRD including the required `categories`:
 ```yaml
 apiVersion: apiextensions.k8s.io/v1
@@ -243,6 +247,8 @@ The default `PodNetworkKind` (named `default`) provides a cluster-wide fallback 
 * **Workload & ResourceClaim Portability:** Users can request attachment to a pod network simply by specifying the network name (and namespace, if applicable), without needing to know or hardcode the underlying implementation's `PodNetworkKind`.
 * **Generic DeviceClasses:** Cluster administrators can define a common `DeviceClass` targeting the default `PodNetworkKind` (`default`). Workload manifests can then reference this standard class across environments regardless of the specific network provider deployed in the cluster.
 * **Ecosystem API Integration:** High-level abstractions (e.g. Services, Gateway API routes, NetworkPolicies...) targeting pod networks can accept simple network name references and automatically resolve them to the `PodNetworkKind` named `default`.
+
+**Note:** Using the reserved `default` name together with the 1:1 `ImplementationType` uniqueness constraint (`TypeConflict`) moves away from the `GatewayClass` and `IngressClass` model, where implementations register their own named classes and administrators can switch or migrate defaults between them. In this design, `default` is a platform- or administrator-owned singleton rather than an implementation-installed resource: an implementation cannot have both a named `PodNetworkKind` (for example, `userdefinednetwork`) and `default` referencing the same Group/Kind, and changing `default` to another Group/Kind requires deleting all existing pod network objects of that Group/Kind first due to deletion protection. Defaulting semantics and migration procedures will be revisited based on `v1alpha1` feedback.
 
 Cluster administrators can define a `DeviceClass` targeting the default `PodNetworkKind`:
 
@@ -492,7 +498,7 @@ Conformance tests validate:
     * `multinetwork.networking.x-k8s.io/podNetworkNamespace`, identifying the kubernetes namespace of the pod network instance if the pod network object is namespace-scoped. This attribute must not exist if the pod network object is cluster-scoped.
   3. The advertised attributes accurately reflect the pod network object name, namespace (if applicable) and kind.
 * ResourceClaim Pod Network Selection: A pod network implementation must support attaching a Pod to a pod network via ResourceClaim selection using standard device attributes.
-  1. A ResourceClaim selecting a pod network via the `multinetwork.networking.x-k8s.io/podNetwork`, the `multinetwork.networking.x-k8s.io/podNetworkNamespace` (if applicable) and the `multinetwork.networking.x-k8s.io/podNetworkKind` attributes can be successfully allocated.
+  1. A ResourceClaim (in the same namespace as the pod network when the pod network object is namespace-scoped) selecting a pod network via the `multinetwork.networking.x-k8s.io/podNetwork`, the `multinetwork.networking.x-k8s.io/podNetworkNamespace` (if applicable) and the `multinetwork.networking.x-k8s.io/podNetworkKind` attributes can be successfully allocated.
   2. The allocation results in a device being bound to the ResourceClaim.
   3. The selected device corresponds to a pod network advertised via a ResourceSlice.
 * ResourceClaim Pod Network Status Reporting: A pod network implementation must report network attachment status through the ResourceClaim device status.
