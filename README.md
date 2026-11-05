@@ -1,29 +1,45 @@
-# Kubernetes Template Project
+# Multi-Network API
 
-The Kubernetes Template Project is a template for starting new projects in the GitHub organizations owned by Kubernetes. All Kubernetes projects, at minimum, must have the following files:
+The Multi-Network API is a sub-project of Kubernetes [SIG Network](https://github.com/kubernetes/community/tree/master/sig-network). This repository contains the API definitions, Custom Resource Definitions (CRDs), specifications, and generated Go client code for Kubernetes Multi-Network API.
 
-- a `README.md` outlining the project goals, sponsoring sig, and community contact information
-- an `OWNERS` with the project leads listed as approvers ([docs on `OWNERS` files][owners])
-- a `CONTRIBUTING.md` outlining how to contribute to the project
-- an unmodified copy of `code-of-conduct.md` from this repo, which outlines community behavior and the consequences of breaking the code
-- a `LICENSE` which must be Apache 2.0 for code projects, or [Creative Commons 4.0] for documentation repositories, without any custom content
-- a `SECURITY_CONTACTS` with the contact points for the Product Security Team 
-  to reach out to for triaging and handling of incoming issues. They must agree to abide by the
-  [Embargo Policy](https://git.k8s.io/security/private-distributors-list.md#embargo-policy)
-  and will be removed and replaced if they violate that agreement.
+Kubernetes historically attaches all pods to a single cluster-wide network. The Multi-Network project standardizes how pods connect to multiple distinct networks and how those networks are identified, categorized, and selected. This repository defines the `PodNetworkKind` API, standard Dynamic Resource Allocation (DRA) attributes, and discovery mechanisms used by pod network implementations.
 
-## Community, discussion, contribution, and support
+For more details, see:
+- [Requirements and Use Cases](docs/requirements.md)
+- [PodNetworkKind Design Specification](docs/pod-network-kind.md)
 
-Learn how to engage with the Kubernetes community on the [community page](http://kubernetes.io/community/).
+## Getting Started
 
-You can reach the maintainers of this project at:
+To install the `PodNetworkKind` CRD in your cluster:
+```bash
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/multi-network-api/refs/heads/main/deployment/multinetwork.networking.x-k8s.io_podnetworkkinds.yaml
+```
 
-- [Slack](https://slack.k8s.io/)
-- [Mailing List](https://groups.google.com/a/kubernetes.io/g/dev)
+To install the controller for the CRD, visit https://github.com/kubernetes-sigs/multi-network.
 
-### Code of conduct
+Go package documentation:
+- https://pkg.go.dev/sigs.k8s.io/multi-network-api
+- https://pkg.go.dev/sigs.k8s.io/multi-network
+
+## Community, Discussion, and Support
+
+This project is maintained by Kubernetes [SIG Network](https://github.com/kubernetes/community/tree/master/sig-network) under the Multi-Network sub-project.
+
+- **Controller Implementation:** [kubernetes-sigs/multi-network](https://github.com/kubernetes-sigs/multi-network)
+- **Meeting Notes:** [Multi-Network Meeting Notes](https://docs.google.com/document/d/1pe_0aOsI35BEsQJ-FhFH9Z_pWQcU2uqwAnOx2NIx6OY/edit?usp=sharing)
+- **Bi-weekly Meeting (Tuesdays at 06:00 PT (Pacific Time)):** [Zoom Link](https://zoom.us/j/95680858961?pwd=M1c2TTdMZHpMUUtIYXRpbjRobkNJZz09)
+- **Meeting Recordings:** [YouTube Kubernetes Community](https://www.youtube.com/@KubernetesCommunity/search?query=multi-network)
+- **Slack:** [#sig-network-multi-network](https://kubernetes.slack.com/archives/C03UT5H9KDZ) on [Kubernetes Slack](https://slack.k8s.io/)
+- **Mailing List:** [SIG Network Google Group](https://groups.google.com/a/kubernetes.io/g/sig-network)
+
+### Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for instructions on how to contribute to this repository.
+
+### Code of Conduct
 
 Participation in the Kubernetes community is governed by the [Kubernetes Code of Conduct](code-of-conduct.md).
 
-[owners]: https://git.k8s.io/community/contributors/guide/owners.md
-[Creative Commons 4.0]: https://git.k8s.io/website/LICENSE
+### License
+
+This project is licensed under the Apache 2.0 License - see the [LICENSE](LICENSE) file for details.
